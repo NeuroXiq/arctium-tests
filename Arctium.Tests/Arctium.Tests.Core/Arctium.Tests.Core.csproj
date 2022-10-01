@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Platforms>AnyCPU;x86</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Arctium.Shared">
+      <HintPath>..\..\..\arctium\Arctium\src\Arctium\Arctium.Cryptography\bin\Debug\net6.0\Arctium.Shared.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

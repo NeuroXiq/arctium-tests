@@ -30,7 +30,12 @@
       "ProjectGuid": "f86f6e4e-21bb-423b-9caf-6c06c17b6db9",
       "DisplayName": "Arctium.Tests.Core",
       "ColorIndex": 5
+    },
+    "d9e071ef-f15e-4dbb-be3d-6ddfef9e5570": {
+      "ProjectGuid": "d9e071ef-f15e-4dbb-be3d-6ddfef9e5570",
+      "DisplayName": "ConsoleApp2",
+      "ColorIndex": 6
     }
   },
-  "NextColorIndex": 6
+  "NextColorIndex": 7
 }
