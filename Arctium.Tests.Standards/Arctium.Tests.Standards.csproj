@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Arctium.Tests.Core\Arctium.Tests.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Arctium.Cryptography">
+      <HintPath>..\..\arctium\Arctium\src\Arctium\Arctium.Cryptography\bin\Debug\net6.0\Arctium.Cryptography.dll</HintPath>
+    </Reference>
+    <Reference Include="Arctium.Shared">
+      <HintPath>..\..\arctium\Arctium\src\Arctium\Arctium.Cryptography\bin\Debug\net6.0\Arctium.Shared.dll</HintPath>
+    </Reference>
+    <Reference Include="Arctium.Standards">
+      <HintPath>..\..\arctium\Arctium\src\Arctium\Arctium.Standards\bin\Debug\net6.0\Arctium.Standards.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

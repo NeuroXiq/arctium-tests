@@ -1,0 +1,36 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "c2789efa-cb49-4dbd-931a-f2cb710e8e11": {
+      "ProjectGuid": "c2789efa-cb49-4dbd-931a-f2cb710e8e11",
+      "DisplayName": "ConsoleApp1",
+      "ColorIndex": 0
+    },
+    "0e875526-665f-494f-91cb-369db7cac61b": {
+      "ProjectGuid": "0e875526-665f-494f-91cb-369db7cac61b",
+      "DisplayName": "Solution Items",
+      "ColorIndex": 1
+    },
+    "d5ee0a79-da07-448c-9bc8-cf8dbf9df460": {
+      "ProjectGuid": "d5ee0a79-da07-448c-9bc8-cf8dbf9df460",
+      "DisplayName": "Arctium.Tests.RunTests",
+      "ColorIndex": 2
+    },
+    "4c3a2498-aac8-44bc-a740-819588dc6e2f": {
+      "ProjectGuid": "4c3a2498-aac8-44bc-a740-819588dc6e2f",
+      "DisplayName": "Arctium.Tests.Cryptography",
+      "ColorIndex": 3
+    },
+    "62fba018-2c05-45e6-9401-d73d57b8d1f6": {
+      "ProjectGuid": "62fba018-2c05-45e6-9401-d73d57b8d1f6",
+      "DisplayName": "Arctium.Tests.Standards",
+      "ColorIndex": 4
+    },
+    "f86f6e4e-21bb-423b-9caf-6c06c17b6db9": {
+      "ProjectGuid": "f86f6e4e-21bb-423b-9caf-6c06c17b6db9",
+      "DisplayName": "Arctium.Tests.Core",
+      "ColorIndex": 5
+    }
+  },
+  "NextColorIndex": 6
+}

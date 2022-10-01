@@ -1,0 +1,13 @@
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\bin\Debug\netcoreapp2.2\Arctium.Tests.Core.deps.json
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\bin\Debug\netcoreapp2.2\Arctium.Tests.Core.dll
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\bin\Debug\netcoreapp2.2\Arctium.Tests.Core.pdb
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\bin\Debug\netcoreapp2.2\Arctium.Shared.dll
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\bin\Debug\netcoreapp2.2\Arctium.Shared.pdb
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\obj\Debug\netcoreapp2.2\Arctium.Tests.Core.csproj.AssemblyReference.cache
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\obj\Debug\netcoreapp2.2\Arctium.Tests.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\obj\Debug\netcoreapp2.2\Arctium.Tests.Core.AssemblyInfoInputs.cache
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\obj\Debug\netcoreapp2.2\Arctium.Tests.Core.AssemblyInfo.cs
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\obj\Debug\netcoreapp2.2\Arctium.Tests.Core.csproj.CoreCompileInputs.cache
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\obj\Debug\netcoreapp2.2\Arctium.Tests.Core.csproj.CopyComplete
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\obj\Debug\netcoreapp2.2\Arctium.Tests.Core.dll
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Core\obj\Debug\netcoreapp2.2\Arctium.Tests.Core.pdb

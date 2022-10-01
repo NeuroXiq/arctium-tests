@@ -1,0 +1,17 @@
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.deps.json
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.dll
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.pdb
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Cryptography.dll
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Shared.dll
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Tests.Core.dll
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Cryptography.pdb
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Shared.pdb
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\bin\Debug\netcoreapp2.2\Arctium.Tests.Core.pdb
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\obj\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.csproj.AssemblyReference.cache
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\obj\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.GeneratedMSBuildEditorConfig.editorconfig
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\obj\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.AssemblyInfoInputs.cache
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\obj\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.AssemblyInfo.cs
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\obj\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.csproj.CoreCompileInputs.cache
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\obj\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.csproj.CopyComplete
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\obj\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.dll
+C:\my-files\projects\arctium\Arctium\src\Arctium\Arctium.Tests.Cryptography\obj\Debug\netcoreapp2.2\Arctium.Tests.Cryptography.pdb
