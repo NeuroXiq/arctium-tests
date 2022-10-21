@@ -214,8 +214,29 @@ namespace Arctium.Tests.RunTests
                     // Thread.CurrentThread.Priority = ThreadPriority.Highest;
                     foreach (var meth in (List<MethodInfo>)group)
                     {
-                        object objResults = meth.Invoke(instance, new object[0]);
-                        List<TestResult> res = (List<TestResult>)objResults;
+                        var returnType = meth.ReturnType;
+                        var methodName = meth.Name;
+                        List<TestResult> res = new List<TestResult>();
+
+                        if (returnType == typeof(void))
+                        {
+                            try
+                            {
+                                meth.Invoke(instance, new object[0]);
+                                res.Add(new TestResult(methodName, true));
+                            }
+                            catch (Exception)
+                            {
+                                res.Add(new TestResult(methodName, false));
+                            }
+                        }
+                        else
+                        {
+                            object objResults = meth.Invoke(instance, new object[0]);
+                            res = (List<TestResult>)objResults;
+                        }
+
+                        
                         // testResults.AddRange(res);
 
                         var finishedInfo = new FinishedTestsInfo(meth.DeclaringType.Name, meth.Name, res);

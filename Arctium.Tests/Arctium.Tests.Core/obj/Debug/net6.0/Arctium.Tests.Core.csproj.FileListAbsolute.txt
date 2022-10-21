@@ -41,3 +41,4 @@ C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\ne
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.dll
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\ref\Arctium.Tests.Core.dll
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.pdb
+C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.csproj.AssemblyReference.cache

@@ -1,6 +1,7 @@
 ﻿using Arctium.Shared.Helpers;
 using Arctium.Shared.Helpers.Binary;
 using Arctium.Standards;
+using Arctium.Standards.EllipticCurves;
 using Arctium.Tests.Core;
 using Arctium.Tests.Core.Attributes;
 using System.Collections.Generic;
