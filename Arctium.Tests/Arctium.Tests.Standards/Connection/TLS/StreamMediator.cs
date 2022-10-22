@@ -1,6 +1,7 @@
 ﻿using Arctium.Shared.Helpers.Buffers;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -32,11 +33,12 @@ namespace Arctium.Tests.Standards.Connection.TLS
         public ByteBuffer writtenByA = new ByteBuffer();
         public ByteBuffer writtenByB = new ByteBuffer();
 
-        public Stream GetA() => new StreamMediator(writtenByA, writtenByB);
-        public Stream GetB() => new StreamMediator(writtenByB, writtenByA);
+        public StreamMediator GetA() => new StreamMediator(writtenByA, writtenByB);
+        public StreamMediator GetB() => new StreamMediator(writtenByB, writtenByA);
 
         ByteBuffer readFrom;
         ByteBuffer writeTo;
+        private bool abortFatalException = false;
 
         public StreamMediator(ByteBuffer readFrom, ByteBuffer writeTo)
         {
@@ -44,13 +46,22 @@ namespace Arctium.Tests.Standards.Connection.TLS
             this.writeTo = writeTo;
         }
 
+        public void AbortFatalException()
+        {
+            this.abortFatalException = true;
+        }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
             int ex = 0;
             int readed = 0;
+            int timeout = 500;
+            if (Debugger.IsAttached) timeout = 111111111;
 
             while (true)
             {
+                if (abortFatalException) throw new Exception("aborted everyting, fatal exception");
+
                 // need to release lock right after read, can't hold because of deadlock (maybe other thread want to write into 'readFrom' buffer)
                 lock (readFrom)
                 {
@@ -87,6 +98,8 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            if (abortFatalException) throw new Exception("aborted everyting, fatal exception");
+
             lock (writeTo)
             {
                 _Write(buffer, offset, count);

@@ -33,5 +33,24 @@ namespace Arctium.Tests.Core.Testing
         {
             throw new AssertException("Test failed");
         }
+
+        public static void Throws(Action p)
+        {
+            bool catched = false;
+            
+            try
+            {
+                p();
+            }
+            catch (Exception)
+            {
+                catched = true;
+            }
+
+            if (!catched)
+            {
+                throw new AssertException("Expected to throw exception but nothing throw");
+            }
+        }
     }
 }

@@ -202,6 +202,9 @@ namespace Arctium.Tests.RunTests
             members = FilterByMethodName(members);
             members = members.OrderBy(method => method.GetCustomAttribute<TestMethodAttribute>().ExpectedDurationInSeconds).ToList();
 
+            // todo tests : implement thread per class not multiple thread execute one class 
+            // like is right not ('instance' field below shared among all)
+
             var instance = Activator.CreateInstance(testClass);
             // List<TestResult> testResults = new List<TestResult>();
             List<List<MethodInfo>> groups = SplitToEqualSizeGroups(members, 4);
@@ -257,29 +260,51 @@ namespace Arctium.Tests.RunTests
 
         private static List<List<MethodInfo>> SplitToEqualSizeGroups(List<MethodInfo> methods, int groupsCount)
         {
-            List<List<MethodInfo>> results = new List<List<MethodInfo>>();
-            int itemsInGroup = (methods.Count / groupsCount) + 1;
-            itemsInGroup = itemsInGroup < 1 ? 1 : itemsInGroup;
+            List<List<MethodInfo>> res = new List<List<MethodInfo>>();
 
-            for (int i = 0; i < groupsCount; i++)
+            if (methods.Count == 0) return res;
+
+            int inOneGroup = (int)Math.Ceiling((double)methods.Count / (double)groupsCount);
+            int countAfterSplit = (int)Math.Ceiling((double)methods.Count / (double)inOneGroup);
+
+            for (int i = 0; i < countAfterSplit; i++)
             {
-                List<MethodInfo> group = new List<MethodInfo>();
-                int idx = (itemsInGroup * i);
+                List<MethodInfo> gr = new List<MethodInfo>();
+                int start = inOneGroup * i;
 
-                for (int j = 0; j < itemsInGroup && (idx + j) < methods.Count; j++)
+                for (int j = start; j < start + inOneGroup && j < methods.Count; j++)
                 {
-                    group.Add(methods[idx + j]);
+                    gr.Add(methods[j]);
                 }
 
-                results.Add(group);
+                res.Add(gr);
             }
+
+            return res;
+
+            //List<List<MethodInfo>> results = new List<List<MethodInfo>>();
+            //int itemsInGroup = ((methods.Count + groupsCount - 1) / groupsCount) * groupsCount;
+            //itemsInGroup = itemsInGroup < 1 ? 1 : itemsInGroup;
+
+            //for (int i = 0; i < groupsCount; i++)
+            //{
+            //    List<MethodInfo> group = new List<MethodInfo>();
+            //    int idx = (itemsInGroup * i);
+
+            //    for (int j = 0; j < itemsInGroup && (idx + j) < methods.Count; j++)
+            //    {
+            //        group.Add(methods[idx + j]);
+            //    }
+
+            //    results.Add(group);
+            //}
 
             //for (int i = 0; i < remainder; i++)
             //{
             //    results[results.Count - 1].Add(methods[methods.Count - 1 - i]);
             //}
 
-            return results;
+            // return results;
         }
 
         static void ReferenceAssemblies()

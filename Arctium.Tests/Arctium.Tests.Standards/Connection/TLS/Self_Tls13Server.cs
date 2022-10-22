@@ -1,10 +1,13 @@
 ﻿using Arctium.Shared.Helpers.Buffers;
 using Arctium.Shared.Other;
 using Arctium.Standards.Connection.Tls.Tls13.API;
+using Arctium.Standards.X509.X509Cert;
 using Arctium.Tests.Core.Attributes;
 using Arctium.Tests.Core.Testing;
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Arctium.Tests.Standards.Connection.TLS
@@ -26,8 +29,10 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
         class state
         {
-            public Stream mediator;
+            public StreamMediator mediator;
             public byte[] expectedreceive;
+            public Tls13Client client;
+            public Tls13Server server;
         }
 
         [TestMethod]
@@ -58,20 +63,82 @@ namespace Arctium.Tests.Standards.Connection.TLS
         }
 
         [TestMethod]
-        public void AcceptAllSupportedSignatureAlgorithms()
+        public void ServerWillAcceptClientForAllExistingSupportedSignaturesSchemesForDefaultServerConfiguration()
         {
+            // all certificates -> all signatures schemes possible
+            // server must correctly choose valid one
+            var certs = new X509CertWithKey[]
+            {
+                Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha384_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha512_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp256r1_sha256_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp256r1_sha384_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp256r1_sha512_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp384r1_sha256_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp384r1_sha384_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp384r1_sha512_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp521r1_sha256_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp521r1_sha384_1,
+                Tls13TestResources.CERT_WITH_KEY_cert_secp521r1_sha512_1,
+            };
 
+            var allsigschemes = Enum.GetValues<SignatureScheme>();
+
+            foreach (var s in allsigschemes)
+            {
+                var serverctx = Tls13ServerContext.Default(certs);
+                var server = new Tls13Server(serverctx);
+                var clientctx = Tls13ClientContext.DefaultUnsave();
+
+                clientctx.Config.ConfigueSupportedSignatureSchemes(new[] { s });
+                var client = new Tls13Client(clientctx);
+
+                Assert_Connect_SendReceive(server, client);
+            }
+        }
+
+        [TestMethod]
+        public void ServerWillAcceptAllPossibleGroupsInKeyExchangeExtensionInClientHello1()
+        {
+            var cert = new[] { Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha224_1 };
+
+            var allgroups = Enum.GetValues<NamedGroup>();
+
+            foreach (var group in allgroups)
+            {
+                var serverctx = Tls13ServerContext.Default(cert);
+                var server = new Tls13Server(serverctx);
+                var clientctx = Tls13ClientContext.DefaultUnsave();
+                var client = new Tls13Client(clientctx);
+
+                clientctx.Config.ConfigueSupportedGroups(new[] { group });
+
+                Assert_Connect_SendReceive(server, client);
+            }
+        }
+
+        [TestMethod]
+        public void ServerWillThrowAlertExceptionAndAbortIfClientAndServerDoesNotSupportMutuallyKeyExchangeModes()
+        {
+            var client = DefaultClient(new[] { NamedGroup.Ffdhe2048 });
+            var server = DefaultServer(new[] { Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha224_1 }, new[] { NamedGroup.X25519 });
+
+            Assert.Throws(() => Assert_Connect_SendReceive(server, client));
         }
 
         [TestMethod]
         public void AcceptWithPskSessionResumptionTicket()
         {
-
+            //Assert.Fail();
         }
 
         static void Assert_Connect_SendReceive(Tls13Server server, Tls13Client client, int dataLengthKib = 10)
         {
             StreamMediator medit = new StreamMediator(null, null);
+            int const_timeout = 2000;
+
+            if (Debugger.IsAttached) const_timeout = 1000000;
 
             var cs = medit.GetA();
             var ss = medit.GetB();
@@ -86,18 +153,24 @@ namespace Arctium.Tests.Standards.Connection.TLS
             {
                 var st = (state as state);
                 
-                var tlsstream = server.Accept(st.mediator);
+                try
+                {
+                    var tlsserver = st.server;
+                    var tlsstream = tlsserver.Accept(st.mediator);
+                    BufferForStream bufForStream = new BufferForStream(tlsstream);
+                    bufForStream.LoadToLength(st.expectedreceive.Length);
+                    tlsstream.Write(st.expectedreceive, 0, st.expectedreceive.Length);
 
-                BufferForStream bufForStream = new BufferForStream(tlsstream);
-
-                bufForStream.LoadToLength(st.expectedreceive.Length);
-
-                tlsstream.Write(st.expectedreceive, 0, st.expectedreceive.Length);
-
-                Assert.MemoryEqual(new Shared.Helpers.BytesRange(bufForStream.Buffer, 0, bufForStream.DataLength), st.expectedreceive);
-
+                    Assert.MemoryEqual(new Shared.Helpers.BytesRange(bufForStream.Buffer, 0, bufForStream.DataLength), st.expectedreceive);
+                }
+                catch (Exception e)
+                {
+                    st.mediator.AbortFatalException();
+                    throw e;
+                }
             }, new state
             {
+                server = server,
                 mediator = ss,
                 expectedreceive = Data_10Kib
             });
@@ -105,7 +178,8 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var s = Task.Factory.StartNew(state =>
             {
                 var st = (state as state);
-                var tlsstream = client.Connect(st.mediator);
+                var tlsclient= st.client;
+                var tlsstream = tlsclient.Connect(st.mediator);
 
                 tlsstream.Write(st.expectedreceive);
                 BufferForStream bufForStream = new BufferForStream(tlsstream);
@@ -115,23 +189,49 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 Assert.MemoryEqual(new Shared.Helpers.BytesRange(bufForStream.Buffer, 0, bufForStream.DataLength), st.expectedreceive);
             }, new state()
             {
+                client = client,
                 mediator = cs,
                 expectedreceive = Data_10Kib
             });
 
-            bool success = Task.WaitAll(new Task[] { c, s }, 2000);
+            // bool success = Task.WaitAll(new Task[] { c, s }, const_timeout);
+
+            int sleep = 0;
+
+            while (true)
+            {
+                if (c.IsCompleted && s.IsCompleted) break;
+                if (sleep++ > 10) Assert.Fail();
+                Thread.Sleep(400);
+            }
 
             if (c.Exception != null || s.Exception != null) Assert.Fail();
-
-            if (!success)
-            {
-                throw new System.Exception("failed to execute tests. waited and not completed, maybe long operation or something goes wrong");
-            }
         }
 
-        static Tls13Client DefaultClient()
+        static Tls13Server DefaultServer(X509CertWithKey[] certWithKey, NamedGroup[] keyExchangeGroups = null)
+        {
+            var serverctx = Tls13ServerContext.Default(certWithKey);
+
+            if (keyExchangeGroups != null)
+            {
+                serverctx.Config.ConfigueSupportedNamedGroupsForKeyExchange(keyExchangeGroups);
+            }
+
+            var server = new Tls13Server(serverctx);
+
+            return server;
+        }
+
+        static Tls13Client DefaultClient(NamedGroup[] supportedGroups= null)
         {
             var context = Tls13ClientContext.DefaultUnsave();
+            var config = context.Config;
+
+            if (supportedGroups != null)
+            {
+                config.ConfigueClientKeyShare(supportedGroups);
+                config.ConfigueSupportedGroups(supportedGroups);
+            }
 
             Tls13Client client = new Tls13Client(context);
 
