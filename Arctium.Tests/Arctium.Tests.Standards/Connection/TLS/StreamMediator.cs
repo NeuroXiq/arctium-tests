@@ -9,10 +9,11 @@ using System.Threading.Tasks;
 
 namespace Arctium.Tests.Standards.Connection.TLS
 {
+    /// <summary>
+    /// Very easy to get deadlock (lock on read/write buffer), now seems to works
+    /// </summary>
     internal class StreamMediator : Stream
     {
-        static object _lock = new object();
-
         public override bool CanRead => throw new NotImplementedException();
 
         public override bool CanSeek => throw new NotImplementedException();
@@ -43,35 +44,28 @@ namespace Arctium.Tests.Standards.Connection.TLS
             this.writeTo = writeTo;
         }
 
-        public int _Read(byte[] buffer, int offset, int count)
+        public override int Read(byte[] buffer, int offset, int count)
         {
             int ex = 0;
             int readed = 0;
 
-            while (readed == 0)
+            while (true)
             {
-                int cpy = readFrom.DataLength > count ? count : readFrom.DataLength;
-
-                if (cpy > 0)
+                // need to release lock right after read, can't hold because of deadlock (maybe other thread want to write into 'readFrom' buffer)
+                lock (readFrom)
                 {
-                    MemCpy.Copy(readFrom.Buffer, 0, buffer, offset, cpy);
-                    readFrom.TrimStart(cpy);
-                    return cpy;
+                    int cpy = readFrom.DataLength > count ? count : readFrom.DataLength;
+
+                    if (cpy > 0)
+                    {
+                        MemCpy.Copy(readFrom.Buffer, 0, buffer, offset, cpy);
+                        readFrom.TrimStart(cpy);
+                        return cpy;
+                    }
                 }
 
-                if (ex++ > 5) throw new Exception("tests -> problem with readng from stream");
-
-                if (readed == 0) Thread.Sleep(300);
-            }
-
-            return readed;
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            lock (_lock)
-            {
-                return _Read(buffer, offset, count);
+                if (ex++ > 500) throw new Exception("tests -> problem with reading from stream");
+                if (readed == 0) Thread.Sleep(10);
             }
         }
 
@@ -93,7 +87,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            lock (_lock)
+            lock (writeTo)
             {
                 _Write(buffer, offset, count);
             }

@@ -33,6 +33,7 @@ C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\bin\Debug\ne
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\bin\Debug\net6.0\Arctium.Tests.Core.pdb
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\bin\Debug\net6.0\Arctium.Shared.dll
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\bin\Debug\net6.0\Arctium.Shared.pdb
+C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.csproj.AssemblyReference.cache
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.GeneratedMSBuildEditorConfig.editorconfig
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.AssemblyInfoInputs.cache
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.AssemblyInfo.cs
@@ -41,4 +42,3 @@ C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\ne
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.dll
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\ref\Arctium.Tests.Core.dll
 C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.pdb
-C:\my-files\projects\arctium-tests\Arctium.Tests\Arctium.Tests.Core\obj\Debug\net6.0\Arctium.Tests.Core.csproj.AssemblyReference.cache
