@@ -92,7 +92,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
         public void _Write(byte[] buffer, int offset, int count)
         {
-            int offs = writeTo.OutsideAppend(count);
+            int offs = writeTo.MallocAppend(count);
             MemCpy.Copy(buffer, offset, writeTo.Buffer, offs, count);
         }
 

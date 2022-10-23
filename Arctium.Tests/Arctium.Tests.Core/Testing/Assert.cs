@@ -1,10 +1,18 @@
 ﻿using Arctium.Shared.Helpers;
 using System;
+using System.Collections.Generic;
 
 namespace Arctium.Tests.Core.Testing
 {
     public static class Assert
     {
+        public static void ValuesEqual<T>(T expected, T current)
+        {
+            if (EqualityComparer<T>.Default.Equals(expected, current)) return;
+
+            throw new AssertException(String.Format("Values are not equal: expected: {0}, current: {1}", expected, current));
+        }
+
         public static void MemoryEqual(BytesRange mem1, BytesRange mem2)
         {
             int indvalidBytesPos = -1;
@@ -51,6 +59,13 @@ namespace Arctium.Tests.Core.Testing
             {
                 throw new AssertException("Expected to throw exception but nothing throw");
             }
+        }
+
+        public static void IsTrue(bool value)
+        {
+            if (value) return;
+
+            throw new AssertException("Expected to be true but is false");
         }
     }
 }
