@@ -37,9 +37,17 @@ namespace Arctium.Tests.Core.Testing
             }
         }
 
-        public static void Fail()
+        public static void NotNull(object obj)
         {
-            throw new AssertException("Test failed");
+            if (obj != null) return;
+
+            throw new AssertException("Value should not be null but it is null");
+        }
+
+        public static void Fail(string info = null)
+        {
+            var msg = string.Format("Test failed. {0}", info ?? String.Empty);
+            throw new AssertException(msg);
         }
 
         public static void Throws(Action p)

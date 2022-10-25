@@ -1,5 +1,6 @@
 ﻿using Arctium.Shared.Helpers.Buffers;
 using Arctium.Standards.Connection.Tls.Tls13.API;
+using Arctium.Standards.Connection.Tls.Tls13.API.Extensions;
 using Arctium.Standards.X509.X509Cert;
 using Arctium.Tests.Core.Testing;
 using System;
@@ -120,12 +121,19 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
         public static Tls13Server DefaultServer(X509CertWithKey[] certWithKey = null,
             NamedGroup[] keyExchangeGroups = null,
-            int? recordSizeLimit = null)
+            int? recordSizeLimit = null,
+            Func<ExtensionServerALPNSelector, ExtensionServerALPNSelector.Result> alpnSelector = null)
         {
             certWithKey = certWithKey ?? new[] { Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1 };
 
             var serverctx = Tls13ServerContext.Default(certWithKey);
             var config = serverctx.Config;
+
+            if (alpnSelector != null)
+            {
+                config.ConfigueExtensionALPN(alpnSelector);
+            }
+
 
             if (keyExchangeGroups != null)
             {
@@ -145,10 +153,16 @@ namespace Arctium.Tests.Standards.Connection.TLS
         /// </summary>
         public static Tls13Client DefaultClient(
             NamedGroup[] supportedGroups = null,
-            int? recordSizeLimit = null)
+            int? recordSizeLimit = null,
+            ExtensionClientALPNConfig alpnConfig = null)
         {
             var context = Tls13ClientContext.DefaultUnsave();
             var config = context.Config;
+
+            if (alpnConfig != null)
+            {
+                config.ConfigureExtensionALPN(alpnConfig);
+            }
 
             if (supportedGroups != null)
             {
