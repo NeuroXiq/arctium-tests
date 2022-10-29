@@ -1,10 +1,13 @@
 ﻿using Arctium.Shared.Helpers.Buffers;
 using Arctium.Shared.Other;
 using Arctium.Standards.Connection.Tls.Tls13.API;
+using Arctium.Standards.Connection.Tls.Tls13.API.APIModel;
+using Arctium.Standards.Connection.Tls.Tls13.API.Messages;
 using Arctium.Standards.X509.X509Cert;
 using Arctium.Tests.Core.Attributes;
 using Arctium.Tests.Core.Testing;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -16,6 +19,82 @@ namespace Arctium.Tests.Standards.Connection.TLS
     [TestsClass]
     class Self_Tls13Server
     {
+        #region ClientAuth handshake
+        
+        class TestHandshakeClientAuthClientConfig : ClientConfigHandshakeClientAuthentication
+        {
+            private X509CertWithKey clientCert;
+
+            public TestHandshakeClientAuthClientConfig(X509CertWithKey clientCert)
+            {
+                this.clientCert = clientCert;
+            }
+
+            public override Certificates GetCertificateToSendToServer(List<Extension> extensionInCertificateRequest)
+            {
+                return new Certificates
+                {
+                    ClientCertificate = clientCert,
+                    ParentCertificates = new X509Certificate[0]
+                };
+            }
+        }
+
+        class TestHandshakeClientAuthServerConfig : ServerConfigHandshakeClientAuthentication
+        {
+            private bool expectNotEmptyCert;
+            private Action action;
+
+            public TestHandshakeClientAuthServerConfig(bool expectNotEmptyCert, Action action)
+            {
+                this.expectNotEmptyCert = expectNotEmptyCert;
+                this.action = action;
+            }
+
+            public override Action CertificateFromClientReceived(byte[][] certificateFromClient, List<Extension> extensions)
+            {
+                if (expectNotEmptyCert) Assert.IsTrue(certificateFromClient.Length != 0);
+
+                return action;
+            }
+        }
+
+        [TestMethod]
+        public void Message_ServerSentCertificateRequest_ClientSentEmptyCertificate_ServerWillAbort()
+        {
+            var server = DefaultServer(hsClientAuth: new TestHandshakeClientAuthServerConfig(false, ServerConfigHandshakeClientAuthentication.Action.AlertFatalCertificateRequired));
+            var client = DefaultClient(hsClientAuth: new TestHandshakeClientAuthClientConfig(null));
+
+            Assert.Throws(() => Assert_Connect_SendReceive(server, client));
+        }
+
+        [TestMethod]
+        public void Message_ServerSentCertificateRequest_ClientSentEmptyCertificate_Success()
+        {
+            var server = DefaultServer(hsClientAuth: new TestHandshakeClientAuthServerConfig(false, ServerConfigHandshakeClientAuthentication.Action.Success));
+            var client = DefaultClient(hsClientAuth: new TestHandshakeClientAuthClientConfig(null));
+
+            Assert_Connect_SendReceive(server, client, out var cinfo, out var sinfo);
+
+            Assert.NotNull(cinfo.ResultHandshakeClientAuthentication);
+            Assert.NotNull(sinfo.ResultHandshakeClientAuthentication);
+        }
+
+        [TestMethod]
+        public void Message_ClientAuthenticationDuringHandshake_ServerWillAuthenticateClientWithCertificate()
+        {
+            var server = DefaultServer(hsClientAuth: new TestHandshakeClientAuthServerConfig(true, ServerConfigHandshakeClientAuthentication.Action.Success));
+            var client = DefaultClient(hsClientAuth: new TestHandshakeClientAuthClientConfig(Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1));
+
+            Assert_Connect_SendReceive(server, client, out var cinfo, out var sinfo);
+
+            Assert.NotNull(cinfo.ResultHandshakeClientAuthentication);
+            Assert.NotNull(sinfo.ResultHandshakeClientAuthentication);
+            Assert.NotEmpty(cinfo.ResultHandshakeClientAuthentication.ClientCertificate);
+            Assert.NotEmpty(sinfo.ResultHandshakeClientAuthentication.ClientCertificate);
+        }
+        
+        #endregion
 
         [TestMethod]
         public void AcceptSimplestConnection_RSA_Certificate()

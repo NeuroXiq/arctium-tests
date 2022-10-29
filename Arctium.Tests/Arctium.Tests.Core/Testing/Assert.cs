@@ -1,6 +1,7 @@
 ﻿using Arctium.Shared.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Arctium.Tests.Core.Testing
 {
@@ -74,6 +75,20 @@ namespace Arctium.Tests.Core.Testing
             if (value) return;
 
             throw new AssertException("Expected to be true but is false");
+        }
+
+        public static void IsFalse(bool value)
+        {
+            if (!value) return;
+
+            throw new AssertException("Expected to be false but is true");
+        }
+
+        public static void NotEmpty<T>(IEnumerable<T> array)
+        {
+            if (array != null && array.Any()) return;
+
+            throw new AssertException("Not empty: Expected to be not empty but is null or empty");
         }
     }
 }
