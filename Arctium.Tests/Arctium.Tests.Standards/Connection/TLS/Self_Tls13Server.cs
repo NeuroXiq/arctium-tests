@@ -19,45 +19,137 @@ namespace Arctium.Tests.Standards.Connection.TLS
     [TestsClass]
     class Self_Tls13Server
     {
-        #region ClientAuth handshake
-        
-        class TestHandshakeClientAuthClientConfig : ClientConfigHandshakeClientAuthentication
-        {
-            private X509CertWithKey clientCert;
+        #region Post Handshake Client Auth 
 
-            public TestHandshakeClientAuthClientConfig(X509CertWithKey clientCert)
+        class TestPHCA_Server : ServerConfigPostHandshakeClientAuthentication
+        {
+            public bool AuthSuccess { get; private set; } = false;
+
+            public TestPHCA_Server()
             {
-                this.clientCert = clientCert;
+                base.ClientAuthSuccess += TestPHCA_Server_ClientAuthSuccess;
             }
 
-            public override Certificates GetCertificateToSendToServer(List<Extension> extensionInCertificateRequest)
+            private void TestPHCA_Server_ClientAuthSuccess(object sender, ClientAuthSuccessEventArgs e)
+            {
+                AuthSuccess = true;
+                Assert.IsTrue(AuthSuccess);
+            }
+
+            public override Action CertificateFromClientReceived(byte[][] certificateFromClient, List<Extension> extensions)
+            {
+                return Action.Success;
+            }
+        }
+
+        class TestPHCA_Client : ClientConfigPostHandshakeClientAuthentication
+        {
+            private X509CertWithKey certWithKey;
+
+            public TestPHCA_Client(X509CertWithKey certWithKey)
+            {
+                this.certWithKey = certWithKey;
+            }
+
+            public override Certificates GetCertificateToSendToServer(IList<Extension> extensionInCertificateRequest)
             {
                 return new Certificates
                 {
-                    ClientCertificate = clientCert,
+                    ClientCertificate = certWithKey,
                     ParentCertificates = new X509Certificate[0]
                 };
             }
         }
 
-        class TestHandshakeClientAuthServerConfig : ServerConfigHandshakeClientAuthentication
+        [TestMethod]
+        public void Message_PostHandshakeClientAuthentication_MultipleInterleavedWithDataExchangeMessages()
         {
-            private bool expectNotEmptyCert;
-            private Action action;
+            var sauth = new TestPHCA_Server();
+            var server = DefaultServer(phca: sauth);
+            var client = DefaultClient(phca: new TestPHCA_Client(Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1));
 
-            public TestHandshakeClientAuthServerConfig(bool expectNotEmptyCert, Action action)
+            byte[] towrite = new byte[1024];
+
+            Action<Tls13ServerStream> sAction = (stream) =>
             {
-                this.expectNotEmptyCert = expectNotEmptyCert;
-                this.action = action;
-            }
+                stream.Write(towrite);
+                stream.PostHandshakeClientAuthentication();
+                stream.Write(towrite);
+                stream.Write(towrite);
+                stream.PostHandshakeClientAuthentication();
+                stream.PostHandshakeClientAuthentication();
+                stream.Write(towrite);
+                stream.Write(towrite);
+                stream.Write(towrite);
+                stream.PostHandshakeClientAuthentication();
+                stream.PostHandshakeClientAuthentication();
+                stream.PostHandshakeClientAuthentication();
+                stream.PostHandshakeClientAuthentication();
+                stream.Write(towrite);
+            };
 
-            public override Action CertificateFromClientReceived(byte[][] certificateFromClient, List<Extension> extensions)
+            Action<Tls13Stream> cAction = (stream) =>
             {
-                if (expectNotEmptyCert) Assert.IsTrue(certificateFromClient.Length != 0);
+                int len = towrite.Length;
+                byte[] buf = new byte[len];
 
-                return action;
-            }
+                for (int i = 0; i < 7; i++) stream.Read(buf);
+            };
+
+            Assert_Connect_DoAction(server, client, sAction, cAction, out _, out _);
+
         }
+
+        [TestMethod]
+        public void Message_PostHandshakeClientAuthentication_ClientAndServerSuccessWhenNoClientCertificate()
+        {
+            var sauth = new TestPHCA_Server();
+            var server = DefaultServer(phca: sauth);
+            var client = DefaultClient(phca: new TestPHCA_Client(null));
+
+            Action<Tls13ServerStream> serverAction = (s) =>
+            {
+                s.PostHandshakeClientAuthentication();
+                s.TryWaitPostHandshake();
+                s.Write(new byte[123]);
+            };
+
+            Action<Tls13Stream> clientAction = (c) =>
+            {
+                c.Read(new byte[123]);
+            };
+
+            Assert_Connect_DoAction(server, client, serverAction, clientAction, out _, out _);
+            Assert.IsTrue(sauth.AuthSuccess);
+        }
+
+        [TestMethod]
+        public void Message_PostHandshakeClientAuthentication_ClientAndServerSuccessWhenClientHasCertificate()
+        {
+            var serverAuth = new TestPHCA_Server();
+            var server = DefaultServer(phca: serverAuth);
+            var client = DefaultClient(phca: new TestPHCA_Client(Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1));
+
+            Action<Tls13ServerStream> serverAction = (tlstream) =>
+            {
+                tlstream.PostHandshakeClientAuthentication();
+                tlstream.TryWaitPostHandshake();
+                tlstream.Write(new byte[1]);
+            };
+
+            Action<Tls13Stream> clientAction = (Tls13Stream) =>
+            {
+                Tls13Stream.Read(new byte[1], 0, 1);
+            };
+
+            Assert_Connect_DoAction(server, client, serverAction, clientAction, out var cinfo, out var sinfo);
+            Assert.IsTrue(serverAuth.AuthSuccess);
+        }
+
+
+        #endregion
+
+        #region ClientAuth handshake
 
         [TestMethod]
         public void Message_ServerSentCertificateRequest_ClientSentEmptyCertificate_ServerWillAbort()

@@ -12,6 +12,31 @@ namespace Arctium.Tests.Standards.Connection.TLS
     [TestsClass]
     internal class Tls13_Self_Extension_Server
     {
+        #region 
+
+        [TestMethod]
+        public void Extension_OidFilters_ServerSendsOidFiltersAndClientReceiveOidFilters()
+        {
+            var filters = new ExtensionServerConfigOidFilters.OidFilter[]
+            {
+                new ExtensionServerConfigOidFilters.OidFilter(new byte[1] { 1 } , new byte[] { 1 }),
+                new ExtensionServerConfigOidFilters.OidFilter(new byte[2] { 2, 3 }, new byte[] { 2 }),
+                new ExtensionServerConfigOidFilters.OidFilter(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, new byte[] { 1,2,3,4,5,6,7,8,9,10 }),
+                new ExtensionServerConfigOidFilters.OidFilter(new byte[244], new byte[0]),
+                new ExtensionServerConfigOidFilters.OidFilter(new byte[255], new byte[10000]),
+            };
+
+            var authOnServer = new TestHandshakeClientAuthServerConfig(true, Arctium.Standards.Connection.Tls.Tls13.API.Messages.ServerConfigHandshakeClientAuthentication.Action.Success);
+            var authOnClient = new TestHandshakeClientAuthClientConfig(Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1, expectedOidFilters: filters);
+            var oidFilters = new ExtensionServerConfigOidFilters(filters);
+            var server = DefaultServer(oidFilters: oidFilters, hsClientAuth: authOnServer );
+            var client = DefaultClient(hsClientAuth: authOnClient);
+
+            Assert_Connect_SendReceive(server, client);
+        }
+
+        #endregion
+
 
         #region SignatureAlgorithmCert
 

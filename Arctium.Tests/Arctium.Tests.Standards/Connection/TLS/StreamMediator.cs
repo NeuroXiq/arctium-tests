@@ -75,7 +75,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
                     }
                 }
 
-                if (ex++ > 500) throw new Exception("tests -> problem with reading from stream");
+                if (ex++ > 500 && Tls13TestHelper.NotDebug) throw new Exception("tests -> problem with reading from stream");
                 if (readed == 0) Thread.Sleep(10);
             }
         }
