@@ -19,6 +19,73 @@ namespace Arctium.Tests.Standards.Connection.TLS
     [TestsClass]
     class Self_Tls13Server
     {
+        public void Message_GenerateTest_ServerClientExchange100MBData()
+        {
+            
+        }
+
+        #region KeyUpdate
+
+        [TestMethod]
+        public void Message_KeyUpdate_ClientAndServerSendsKeyUpdateAndAllWorksFine()
+        {
+            var server = DefaultServer();
+            var client = DefaultClient();
+
+            int datalen = 1024;
+            byte[] writedata = new byte[datalen];
+
+            Action<Tls13ServerStream> saction = (sstream) =>
+            {
+                sstream.Write(writedata);
+                sstream.PostHandshakeKeyUpdate(true);
+                sstream.Write(writedata);
+                sstream.Write(writedata);
+                sstream.PostHandshakeKeyUpdate(false);
+                sstream.PostHandshakeKeyUpdate(true);
+                sstream.Write(writedata);
+                sstream.Write(writedata);
+                sstream.Write(writedata);
+                sstream.PostHandshakeKeyUpdate(false);
+                sstream.PostHandshakeKeyUpdate(true);
+                sstream.PostHandshakeKeyUpdate(true);
+                sstream.Write(writedata);
+
+                byte[] readb = new byte[datalen];
+                for (int i = 0; i < 7; i++) sstream.Read(readb);
+            };
+
+            Action<Tls13Stream> caction = (cstream) =>
+            {
+                byte[] readbuf = new byte[datalen];
+
+                for (int i = 0; i < 7; i++)
+                {
+                    if (i == 1 || i == 5) cstream.PostHandshakeKeyUpdate(true);
+
+                    cstream.Read(readbuf);
+                }
+
+                cstream.Write(writedata);
+                cstream.PostHandshakeKeyUpdate(true);
+                cstream.Write(writedata);
+                cstream.Write(writedata);
+                cstream.PostHandshakeKeyUpdate(false);
+                cstream.PostHandshakeKeyUpdate(true);
+                cstream.Write(writedata);
+                cstream.Write(writedata);
+                cstream.Write(writedata);
+                cstream.PostHandshakeKeyUpdate(false);
+                cstream.PostHandshakeKeyUpdate(true);
+                cstream.PostHandshakeKeyUpdate(true);
+                cstream.Write(writedata);
+            };
+
+            Assert_Connect_DoAction(server, client, saction, caction, out _, out _);
+        }
+
+        #endregion
+
         #region Post Handshake Client Auth 
 
         class TestPHCA_Server : ServerConfigPostHandshakeClientAuthentication
