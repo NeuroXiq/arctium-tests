@@ -19,9 +19,13 @@ namespace Arctium.Tests.Standards.Connection.TLS
     [TestsClass]
     class Self_Tls13Server
     {
-        public void Message_GenerateTest_ServerClientExchange100MBData()
+        [TestMethod]
+        public void Message_GenerateTest_ServerClientExchange1MBData()
         {
-            
+            var server = DefaultServer();
+            var client = DefaultClient();
+
+            Assert_Connect_SendReceive(server, client, 1 * 1024);
         }
 
         #region KeyUpdate
@@ -34,6 +38,10 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
             int datalen = 1024;
             byte[] writedata = new byte[datalen];
+
+            // read count (on both sides)
+            // must be equal write count (on second side
+            // keyupdate must not be last action invoked
 
             Action<Tls13ServerStream> saction = (sstream) =>
             {

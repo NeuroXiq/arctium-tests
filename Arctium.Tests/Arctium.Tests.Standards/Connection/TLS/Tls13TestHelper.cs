@@ -23,9 +23,9 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
         public class TestHandshakeClientAuthClientConfig : ClientConfigHandshakeClientAuthentication
         {
-
             private X509CertWithKey clientCert;
             private ExtensionServerConfigOidFilters.OidFilter[] expectedOidFilters;
+            private Action<IList<Extension>> assertAction;
 
             public TestHandshakeClientAuthClientConfig(X509CertWithKey clientCert, ExtensionServerConfigOidFilters.OidFilter[] expectedOidFilters = null)
             {
@@ -33,8 +33,15 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 this.expectedOidFilters = expectedOidFilters;
             }
 
+            public TestHandshakeClientAuthClientConfig(Action<IList<Extension>> assertAction)
+            {
+                this.assertAction = assertAction;
+            }
+
             public override Certificates GetCertificateToSendToServer(IList<Extension> extensionInCertificateRequest)
             {
+                if (assertAction != null) assertAction(extensionInCertificateRequest);
+
                 if (expectedOidFilters != null)
                 {
                     var oids = extensionInCertificateRequest.FirstOrDefault(f => f.ExtensionType == ExtensionType.OidFilters) as ExtensionOidFilters;
@@ -61,6 +68,12 @@ namespace Arctium.Tests.Standards.Connection.TLS
         {
             private bool expectNotEmptyCert;
             private Action action;
+            private Action<byte[][], List<Extension>> assertAction;
+
+            public TestHandshakeClientAuthServerConfig(Action<byte[][], List<Extension>> assertAction)
+            {
+                this.assertAction = assertAction;
+            }
 
             public TestHandshakeClientAuthServerConfig(bool expectNotEmptyCert, Action action)
             {
@@ -72,7 +85,54 @@ namespace Arctium.Tests.Standards.Connection.TLS
             {
                 if (expectNotEmptyCert) Assert.IsTrue(certificateFromClient.Length != 0);
 
+                if (assertAction != null)
+                {
+                    assertAction(certificateFromClient, extensions);
+                    return Action.Success;
+                }
+
                 return action;
+            }
+        }
+
+        public class TestPHAuthClientConfig : ClientConfigPostHandshakeClientAuthentication
+        {
+            private Action<IList<Extension>> assertAction;
+
+            public TestPHAuthClientConfig(Action<IList<Extension>> assertAction)
+            {
+                this.assertAction = assertAction;
+            }
+
+            public override Certificates GetCertificateToSendToServer(IList<Extension> extensionInCertificateRequest)
+            {
+                if (assertAction != null) assertAction(extensionInCertificateRequest);
+
+                return new Certificates()
+                {
+                    ClientCertificate = null,
+                    ParentCertificates = new X509Certificate[0]
+                };
+            }
+        }
+
+        public class TestPHAuthServerConfig : ServerConfigPostHandshakeClientAuthentication
+        {
+            private Action<byte[][], List<Extension>> assertAction;
+
+
+            public TestPHAuthServerConfig() { }
+
+            public TestPHAuthServerConfig(Action<byte[][], List<Extension>> assertAction)
+            {
+                this.assertAction = assertAction;
+            }
+
+            public override Action CertificateFromClientReceived(byte[][] certificateFromClient, List<Extension> extensions)
+            {
+                if (assertAction != null) assertAction(certificateFromClient, extensions);
+
+                return Action.Success;
             }
         }
 
@@ -97,6 +157,9 @@ namespace Arctium.Tests.Standards.Connection.TLS
         {
             StreamMediator medit = new StreamMediator(null, null);
             int const_timeout = 2000;
+            int maxWaitMs = 10 * 1000;
+            int sleepMs = 400;
+            int sleepCount = (int)Math.Ceiling((double)maxWaitMs / sleepMs);
 
             if (Debugger.IsAttached) const_timeout = 1000000;
 
@@ -127,8 +190,11 @@ namespace Arctium.Tests.Standards.Connection.TLS
             while (true)
             {
                 if (c.IsCompleted && s.IsCompleted) break;
-                if (sleep++ > 10 && NotDebug) Assert.Fail("maybe fail because long operation or maybe fail because of real fail");
-                Thread.Sleep(400); //maybe this need to be longer period, maybe long calculations or smt
+                if (sleep++ > sleepCount && NotDebug)
+                {
+                    Assert.Fail("maybe fail because long operation or maybe fail because of real fail");
+                }
+                Thread.Sleep(sleepMs); //maybe this need to be longer period, maybe long calculations or smt
             }
 
             if (c.Exception != null || s.Exception != null) Assert.Fail();
@@ -285,13 +351,15 @@ namespace Arctium.Tests.Standards.Connection.TLS
             ExtensionServerConfigServerName sni = null,
             ServerConfigHandshakeClientAuthentication hsClientAuth = null,
             ExtensionServerConfigOidFilters oidFilters = null,
-            ServerConfigPostHandshakeClientAuthentication phca = null)
+            ServerConfigPostHandshakeClientAuthentication phca = null,
+            ExtensionServerConfigCertificateAuthorities certAuthorities = null)
         {
             certWithKey = certWithKey ?? new[] { Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1 };
 
             var serverctx = Tls13ServerContext.Default(certWithKey);
             var config = serverctx.Config;
 
+            if (certAuthorities != null) config.ConfigureExtensionCertificateAuthorities(certAuthorities);
             if (phca != null) config.ConfigurePostHandshakeClientAuthentication(phca);
             if (oidFilters != null) config.ConfigureExtensionOidFilters(oidFilters);
             if (sni != null) config.ConfigureExtensionServerName(sni);
@@ -316,11 +384,13 @@ namespace Arctium.Tests.Standards.Connection.TLS
             ExtensionClientConfigServerName sni = null,
             ExtensionClientConfigSignatureAlgorithmsCert sacConfig = null,
             ClientConfigHandshakeClientAuthentication hsClientAuth = null,
-            ClientConfigPostHandshakeClientAuthentication phca = null)
+            ClientConfigPostHandshakeClientAuthentication phca = null,
+            ExtensionClientConfigCertificateAuthorities certAuthorities = null)
         {
             var context = Tls13ClientContext.DefaultUnsave();
             var config = context.Config;
 
+            if (certAuthorities != null) config.ConfigureExtensionCertificateAuthorities(certAuthorities);
             if (phca != null) config.ConfigurePostHandshakeClientAuthentication(phca);
             if (sni != null) config.ConfigureExtensionServerName(sni);
             if (alpnConfig != null) config.ConfigureExtensionALPN(alpnConfig);

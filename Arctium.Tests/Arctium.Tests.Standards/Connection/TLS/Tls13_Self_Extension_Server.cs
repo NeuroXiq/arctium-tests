@@ -1,9 +1,12 @@
 ﻿using Arctium.Shared.Helpers;
 using Arctium.Standards.Connection.Tls.Tls13.API;
+using Arctium.Standards.Connection.Tls.Tls13.API.APIModel;
 using Arctium.Standards.Connection.Tls.Tls13.API.Extensions;
 using Arctium.Tests.Core.Attributes;
 using Arctium.Tests.Core.Testing;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using static Arctium.Tests.Standards.Connection.TLS.Tls13TestHelper;
 
@@ -12,7 +15,77 @@ namespace Arctium.Tests.Standards.Connection.TLS
     [TestsClass]
     internal class Tls13_Self_Extension_Server
     {
-        #region 
+        #region Extension Certificate authorities
+
+        class TestCASConfig : ExtensionServerConfigCertificateAuthorities
+        {
+            public static byte[][] Auths = new byte[][]
+            {
+                new byte[] { 1, },
+                new byte[] { 1, 2 },
+                new byte[] { 1, 2,3,4,5,6,7,8,9 },
+            };
+
+            public TestCASConfig() : base(Auths)
+            {
+            }
+        }
+
+        class TestCACConfig : ExtensionClientConfigCertificateAuthorities
+        {
+            public static byte[][] Auths = new byte[][]
+            {
+                new byte[] { 10, },
+                new byte[] { 11, 21 },
+                new byte[] { 11, 21,31,41,51,61,7,18,19 },
+            };
+
+            public TestCACConfig() : base(Auths) { }
+        }
+
+        [TestMethod]
+        public void Extension_CertificateAuthorities_ServerWillSendInCertifiateRequest_ClientWillReceive()
+        {
+            var sauthorities = new TestCASConfig();
+            var cauthorities = new TestCACConfig();
+
+            Action<IList<Extension>> clientAssert = (ext) =>
+            {
+                var caExt = ext.FirstOrDefault(e => e.ExtensionType == ExtensionType.CertificateAuthorities) as ExtensionCertificateAuthorities;
+
+                Assert.Equals(caExt.Authorities.Length, TestCASConfig.Auths.Length);
+                bool allMatch = caExt.Authorities.All(received => TestCASConfig.Auths.Any(sended => MemOps.Memcmp(received, sended)));
+                Assert.IsTrue(allMatch);
+            };
+
+            var hsAuthClient = new TestHandshakeClientAuthClientConfig(clientAssert);
+            var hsAuthServer = new TestHandshakeClientAuthServerConfig(false, Arctium.Standards.Connection.Tls.Tls13.API.Messages.ServerConfigHandshakeClientAuthentication.Action.Success);
+            var pauthclient = new TestPHAuthClientConfig(clientAssert);
+            var pauthserver = new TestPHAuthServerConfig();
+
+            var server = DefaultServer(certAuthorities: sauthorities, phca:pauthserver);
+            var client = DefaultClient(certAuthorities: cauthorities, phca: pauthclient);
+
+            Action<Tls13Stream> caction = (tlss) =>
+            {
+                tlss.Read(new byte[] { 1 });
+                tlss.Read(new byte[] { 1 });
+            };
+
+            Action<Tls13ServerStream> saction = (tlss) =>
+            {
+                tlss.Write(new byte[] { 1 });
+                tlss.PostHandshakeClientAuthentication();
+                tlss.Write(new byte[] { 1 });
+                tlss.TryWaitPostHandshake();
+            };
+
+            Assert_Connect_DoAction(server, client, saction, caction, out _, out _);
+        }
+
+        #endregion
+
+        #region extension oidfilters
 
         [TestMethod]
         public void Extension_OidFilters_ServerSendsOidFiltersAndClientReceiveOidFilters()
@@ -93,8 +166,6 @@ namespace Arctium.Tests.Standards.Connection.TLS
             Assert.IsFalse(clientinfo.ExtensionResultServerName);
             Assert.IsTrue(serverinfo.ExtensionResultServerName == ExtensionServerConfigServerName.ResultAction.Ignore);
         }
-
-
 
         #region ALPN
 

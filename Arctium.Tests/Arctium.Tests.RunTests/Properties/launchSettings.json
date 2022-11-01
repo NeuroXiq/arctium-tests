@@ -2,7 +2,7 @@
   "profiles": {
     "Arctium.Tests.RunTests": {
       "commandName": "Project",
-      "commandLineArgs": "-classRegex Self_Tls13Server"
+      "commandLineArgs": "-classRegex Tls13_Self_Extension_Server"
     }
   }
 }
