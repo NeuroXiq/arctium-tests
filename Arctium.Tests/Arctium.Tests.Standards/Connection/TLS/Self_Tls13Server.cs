@@ -2,6 +2,7 @@
 using Arctium.Shared.Other;
 using Arctium.Standards.Connection.Tls.Tls13.API;
 using Arctium.Standards.Connection.Tls.Tls13.API.APIModel;
+using Arctium.Standards.Connection.Tls.Tls13.API.Extensions;
 using Arctium.Standards.Connection.Tls.Tls13.API.Messages;
 using Arctium.Standards.X509.X509Cert;
 using Arctium.Tests.Core.Attributes;
@@ -352,7 +353,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 var clientctx = Tls13ClientContext.DefaultUnsave();
                 var client = new Tls13Client(clientctx);
 
-                clientctx.Config.ConfigueSupportedGroups(new[] { group });
+                clientctx.Config.ConfigueExtensionSupportedGroups(new ExtensionClientConfigSupportedGroups( new[] { group }));
 
                 Assert_Connect_SendReceive(server, client);
             }
@@ -361,8 +362,10 @@ namespace Arctium.Tests.Standards.Connection.TLS
         [TestMethod]
         public void ServerWillThrowAlertExceptionAndAbortIfClientAndServerDoesNotSupportMutuallyKeyExchangeModes()
         {
-            var client = DefaultClient(new[] { NamedGroup.Ffdhe2048 });
-            var server = DefaultServer(new[] { Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha224_1 }, new[] { NamedGroup.X25519 });
+            var client = DefaultClient(supportedGroups: new ExtensionClientConfigSupportedGroups(new[] { NamedGroup.Ffdhe2048 }));
+            var server = DefaultServer(
+                new[] { Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha224_1 },
+                new ExtensionServerConfigSupportedGroups(new[] { NamedGroup.X25519 }));
 
             Assert.Throws(() => Assert_Connect_SendReceive(server, client));
         }

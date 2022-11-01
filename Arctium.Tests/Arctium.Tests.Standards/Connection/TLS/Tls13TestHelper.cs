@@ -158,7 +158,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             StreamMediator medit = new StreamMediator(null, null);
             int const_timeout = 2000;
             int maxWaitMs = 10 * 1000;
-            int sleepMs = 400;
+            int sleepMs = 10;
             int sleepCount = (int)Math.Ceiling((double)maxWaitMs / sleepMs);
 
             if (Debugger.IsAttached) const_timeout = 1000000;
@@ -203,58 +203,6 @@ namespace Arctium.Tests.Standards.Connection.TLS
             serverConnectionInfo = c.Result;
         }
 
-        //public static void Assert_Connect_SendReceive(
-        //    Tls13Server server,
-        //    Tls13Client client,
-        //    out Tls13ClientConnectionInfo clientConnectionInfo,
-        //    out Tls13ServerConnectionInfo serverConnectionInfo,
-        //    int dataLengthKib = 10)
-        //{
-        //    StreamMediator medit = new StreamMediator(null, null);
-        //    int const_timeout = 2000;
-
-        //    if (Debugger.IsAttached) const_timeout = 1000000;
-
-        //    var cs = medit.GetA();
-        //    var ss = medit.GetB();
-
-        //    byte[] Data_10Kib = new byte[0x1000 * dataLengthKib];
-        //    for (int i = 0; i < Data_10Kib.Length; i++) Data_10Kib[i] = (byte)i;
-
-        //    //cm.stream = sm;
-        //    //sm.stream = cm;
-
-        //    var c = Task.Factory.StartNew<Tls13ServerConnectionInfo>(StartServer, new state
-        //    {
-        //        server = server,
-        //        mediator = ss,
-        //        expectedreceive = Data_10Kib
-        //    });
-
-        //    var s = Task.Factory.StartNew<Tls13ClientConnectionInfo>(StartClient, new state()
-        //    {
-        //        client = client,
-        //        mediator = cs,
-        //        expectedreceive = Data_10Kib
-        //    });
-
-        //    // bool success = Task.WaitAll(new Task[] { c, s }, const_timeout);
-
-        //    int sleep = 0;
-
-        //    while (true)
-        //    {
-        //        if (c.IsCompleted && s.IsCompleted) break;
-        //        if (sleep++ > 10) Assert.Fail();
-        //        Thread.Sleep(400); //maybe this need to be longer period, maybe long calculations or smt
-        //    }
-
-        //    if (c.Exception != null || s.Exception != null) Assert.Fail();
-
-        //    clientConnectionInfo = s.Result;
-        //    serverConnectionInfo = c.Result;
-        //}
-
         static Tls13ServerConnectionInfo StartServer(object state)
         {
             var st = (state as state);
@@ -265,14 +213,6 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 var tlsstream = tlsserver.Accept(st.mediator, out var serverconnectioninfo);
 
                 st.serveraction(tlsstream);
-
-                //var tlsserver = st.server;
-                //var tlsstream = tlsserver.Accept(st.mediator, out var serverconnectioninfo);
-                //BufferForStream bufForStream = new BufferForStream(tlsstream);
-                //bufForStream.LoadToLength(st.expectedreceive.Length);
-                //tlsstream.Write(st.expectedreceive, 0, st.expectedreceive.Length);
-
-                //Assert.MemoryEqual(new Shared.Helpers.BytesRange(bufForStream.Buffer, 0, bufForStream.DataLength), st.expectedreceive);
 
                 return serverconnectioninfo;
             }
@@ -290,19 +230,6 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var tlsstream = tlsclient.Connect(st.mediator, out var clientconnectioninfo);
 
             st.clientaction(tlsstream);
-
-            ///////
-
-            //var st = (state as state);
-            //var tlsclient = st.client;
-            //var tlsstream = tlsclient.Connect(st.mediator, out var clientconnectioninfo);
-
-            //tlsstream.Write(st.expectedreceive);
-            //BufferForStream bufForStream = new BufferForStream(tlsstream);
-
-            //bufForStream.LoadToLength(st.expectedreceive.Length);
-
-            //Assert.MemoryEqual(new Shared.Helpers.BytesRange(bufForStream.Buffer, 0, bufForStream.DataLength), st.expectedreceive);
 
             return clientconnectioninfo;
         }
@@ -345,9 +272,9 @@ namespace Arctium.Tests.Standards.Connection.TLS
         }
 
         public static Tls13Server DefaultServer(X509CertWithKey[] certWithKey = null,
-            NamedGroup[] keyExchangeGroups = null,
+            ExtensionServerConfigSupportedGroups supportedGroups = null,
             int? recordSizeLimit = null,
-            Func<ExtensionServerALPN, ExtensionServerALPN.Result> alpnSelector = null,
+            ExtensionServerConfigALPN alpnSelector = null,
             ExtensionServerConfigServerName sni = null,
             ServerConfigHandshakeClientAuthentication hsClientAuth = null,
             ExtensionServerConfigOidFilters oidFilters = null,
@@ -364,7 +291,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             if (oidFilters != null) config.ConfigureExtensionOidFilters(oidFilters);
             if (sni != null) config.ConfigureExtensionServerName(sni);
             if (alpnSelector != null) config.ConfigueExtensionALPN(alpnSelector);
-            if (keyExchangeGroups != null) serverctx.Config.ConfigueSupportedNamedGroupsForKeyExchange(keyExchangeGroups);
+            if (supportedGroups != null) serverctx.Config.ConfigueExtensionSupportedGroups(supportedGroups);
             if (recordSizeLimit.HasValue) config.ConfigureExtensionRecordSizeLimit(recordSizeLimit);
             if (hsClientAuth != null) config.ConfigureHandshakeClientAuthentication(hsClientAuth);
 
@@ -378,7 +305,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
         /// then this parameter will be set by invoking configuration method with value for this parameter
         /// </summary>
         public static Tls13Client DefaultClient(
-            NamedGroup[] supportedGroups = null,
+            ExtensionClientConfigSupportedGroups supportedGroups = null,
             int? recordSizeLimit = null,
             ExtensionClientALPNConfig alpnConfig = null,
             ExtensionClientConfigServerName sni = null,
@@ -399,8 +326,8 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
             if (supportedGroups != null)
             {
-                config.ConfigueClientKeyShare(supportedGroups);
-                config.ConfigueSupportedGroups(supportedGroups);
+                config.ConfigueExtensionKeyShare(new ExtensionClientConfigKeyShare(supportedGroups.NamedGroups.ToArray()));
+                config.ConfigueExtensionSupportedGroups(supportedGroups);
             }
 
             if (recordSizeLimit != null) config.ConfigueExtensionRecordSizeLimit(recordSizeLimit);

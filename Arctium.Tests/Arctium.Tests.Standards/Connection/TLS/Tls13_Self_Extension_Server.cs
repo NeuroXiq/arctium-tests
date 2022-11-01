@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static Arctium.Standards.Connection.Tls.Tls13.API.Extensions.ExtensionServerConfigALPN;
 using static Arctium.Tests.Standards.Connection.TLS.Tls13TestHelper;
 
 namespace Arctium.Tests.Standards.Connection.TLS
@@ -169,22 +170,38 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
         #region ALPN
 
+        class TestSALPN : ExtensionServerConfigALPN
+        {
+            private Func<byte[][], ResultSelect, Result> action;
+
+            public TestSALPN(Func<byte[][], ResultSelect, Result> action)
+            {
+                this.action = action;
+            }
+
+            public override Result Handle(byte[][] protocolNameListFromClient, ResultSelect resultSelector)
+            {
+                return action(protocolNameListFromClient, resultSelector);
+            }
+        }
+
         [TestMethod]
         public void Extension_ALPN_ClientAndServerNegotiateProtocolSuccessfullyWhenOnlyOneProtocol()
         {
             var alpnClient = new ExtensionClientALPNConfig();
             alpnClient.Add(ALPNProtocol.HTTP_1_1);
 
-            Func<ExtensionServerALPN, ExtensionServerALPN.Result> alpnServer = (selector) =>
+            Func<byte[][], ResultSelect, Result> alpnAction = (prots, select) =>
             {
-                if (ExtensionResultALPN.TryGetAsStandarizedALPNProtocol(selector.ProtocolNameListFromClient[0], out var standarized))
+                if (ExtensionResultALPN.TryGetAsStandarizedALPNProtocol(prots[0], out var standarized))
                 {
-                    return selector.Success(0);
+                    return select.Success(0);
                 }
 
-                return selector.NotSelectedFatalAlert();
+                return select.NotSelectedFatalAlert();
             };
 
+            var alpnServer = new TestSALPN(alpnAction);
             var client = DefaultClient(alpnConfig: alpnClient);
             var server = DefaultServer(alpnSelector: alpnServer);
 
@@ -210,13 +227,13 @@ namespace Arctium.Tests.Standards.Connection.TLS
             alpnClient.Add(new byte[] { 65,66,67,2,3,4 });
             alpnClient.Add(ALPNProtocol.HTTP_2_over_TCP);
 
-            Func<ExtensionServerALPN, ExtensionServerALPN.Result> alpnServer = (selector) =>
+            Func<byte[][], ResultSelect, Result> alpnAction = (prots, selector) =>
             {
-                if (selector.ProtocolNameListFromClient.Length != 3) Assert.Fail("client sent 3 alpn protocol names");
+                if (prots.Length != 3) Assert.Fail("client sent 3 alpn protocol names");
 
-                for (int i = 0; i < selector.ProtocolNameListFromClient.Length; i++)
+                for (int i = 0; i < prots.Length; i++)
                 {
-                    if (ExtensionResultALPN.TryGetAsStandarizedALPNProtocol(selector.ProtocolNameListFromClient[i], out var standarizedName))
+                    if (ExtensionResultALPN.TryGetAsStandarizedALPNProtocol(prots[i], out var standarizedName))
                     {
                         if (standarizedName == ALPNProtocol.HTTP_2_over_TCP) return selector.Success(i);
                     }
@@ -225,6 +242,8 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 Assert.Fail();
                 return selector.NotSelectedFatalAlert();
             };
+
+            var alpnServer = new TestSALPN(alpnAction);
 
             var server = DefaultServer(alpnSelector: alpnServer);
             var client = DefaultClient(alpnConfig: alpnClient);
@@ -245,7 +264,12 @@ namespace Arctium.Tests.Standards.Connection.TLS
             alpnClient.Add(ALPNProtocol.acme_tls_1);
             alpnClient.Add("123");
 
-            Func<ExtensionServerALPN, ExtensionServerALPN.Result> alpnServer = (selector) => selector.NotSelectedFatalAlert();
+            Func<byte[][], ResultSelect, Result> alpnAction = (prots, selector) =>
+            {
+                return selector.NotSelectedFatalAlert();
+            };
+
+            var alpnServer = new TestSALPN(alpnAction);
 
             var server = DefaultServer(alpnSelector: alpnServer);
             var client = DefaultClient(alpnConfig: alpnClient);
@@ -260,7 +284,9 @@ namespace Arctium.Tests.Standards.Connection.TLS
             alpnClient.Add(ALPNProtocol.acme_tls_1);
             alpnClient.Add("123");
 
-            Func<ExtensionServerALPN, ExtensionServerALPN.Result> alpnServer = (selector) => selector.NotSelectedIgnore();
+            Func<byte[][], ResultSelect, Result> alpnAction = (prots, selector) =>  selector.NotSelectedIgnore();
+
+            var alpnServer = new TestSALPN(alpnAction);
 
             var server = DefaultServer(alpnSelector: alpnServer);
             var client = DefaultClient(alpnConfig: alpnClient);
