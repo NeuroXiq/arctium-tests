@@ -153,7 +153,9 @@ namespace Arctium.Tests.Standards.Connection.TLS
             Action<Tls13ServerStream> serverAction,
             Action<Tls13Stream> clientAction,
             out Tls13ClientConnectionInfo clientConnectionInfo,
-            out Tls13ServerConnectionInfo serverConnectionInfo)
+            out Tls13ServerConnectionInfo serverConnectionInfo,
+            out Exception clientException,
+            out Exception serverException)
         {
             StreamMediator medit = new StreamMediator(null, null);
             int const_timeout = 2000;
@@ -197,10 +199,35 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 Thread.Sleep(sleepMs); //maybe this need to be longer period, maybe long calculations or smt
             }
 
-            if (c.Exception != null || s.Exception != null) Assert.Fail();
+            clientException = c.Exception;
+            serverException = s.Exception;
 
-            clientConnectionInfo = s.Result;
-            serverConnectionInfo = c.Result;
+            clientConnectionInfo = null;
+            serverConnectionInfo = null;
+
+            if (clientException == null) clientConnectionInfo = s.Result;
+            if (serverException == null) serverConnectionInfo = c.Result;
+        }
+
+        public static void Assert_Connect_DoAction_Success(
+            Tls13Server server,
+            Tls13Client client,
+            Action<Tls13ServerStream> serverAction,
+            Action<Tls13Stream> clientAction,
+            out Tls13ClientConnectionInfo clientConnectionInfo,
+            out Tls13ServerConnectionInfo serverConnectionInfo)
+        {
+            Assert_Connect_DoAction(
+                server,
+                client,
+                serverAction,
+                clientAction,
+                out clientConnectionInfo,
+                out serverConnectionInfo,
+                out var clientException,
+                out var serverException);
+
+            if (clientException != null || serverException != null) Assert.Fail();
         }
 
         static Tls13ServerConnectionInfo StartServer(object state)
@@ -213,6 +240,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 var tlsstream = tlsserver.Accept(st.mediator, out var serverconnectioninfo);
 
                 st.serveraction(tlsstream);
+                //tlsstream.Close();
 
                 return serverconnectioninfo;
             }
@@ -230,6 +258,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var tlsstream = tlsclient.Connect(st.mediator, out var clientconnectioninfo);
 
             st.clientaction(tlsstream);
+            //tlsstream.Close();
 
             return clientconnectioninfo;
         }
@@ -239,13 +268,15 @@ namespace Arctium.Tests.Standards.Connection.TLS
             Tls13Client client,
             out Tls13ClientConnectionInfo clientConnectionInfo,
             out Tls13ServerConnectionInfo serverConnectionInfo,
+            out Exception clientException,
+            out Exception serverException,
             int dataLengthKib = 10)
         {
             Action<Tls13Stream> caction = (tlsstream) =>
             {
                 byte[] expectedreceive = new byte[dataLengthKib * 1024];
                 tlsstream.Write(expectedreceive);
-                
+
                 BufferForStream bufForStream = new BufferForStream(tlsstream);
                 bufForStream.LoadToLength(expectedreceive.Length);
 
@@ -262,13 +293,32 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 Assert.MemoryEqual(new Shared.Helpers.BytesRange(bufForStream.Buffer, 0, bufForStream.DataLength), expectedreceive);
             };
 
-            Assert_Connect_DoAction(server, client, saction, caction, out clientConnectionInfo, out serverConnectionInfo);
+            Assert_Connect_DoAction(server, client, saction, caction, out clientConnectionInfo, out serverConnectionInfo, out clientException, out serverException);
+        }
+
+        public static void Assert_Connect_SendReceive_Success(
+            Tls13Server server,
+            Tls13Client client,
+            out Tls13ClientConnectionInfo clientConnectionInfo,
+            out Tls13ServerConnectionInfo serverConnectionInfo,
+            int dataLengthKib = 10)
+        {
+            Assert_Connect_SendReceive(
+                server,
+                client, 
+                out  clientConnectionInfo,
+                out  serverConnectionInfo,
+                out var clientException,
+                out var serverException,
+                dataLengthKib);
+
+            if (clientException != null || serverException != null) Assert.Fail();
         }
 
 
         public static void Assert_Connect_SendReceive(Tls13Server server, Tls13Client client, int dataLengthKib = 10)
         {
-            Assert_Connect_SendReceive(server, client, out var _, out var _, dataLengthKib);
+            Assert_Connect_SendReceive_Success(server, client, out var _, out var _, dataLengthKib);
         }
 
         public static Tls13Server DefaultServer(X509CertWithKey[] certWithKey = null,
@@ -279,13 +329,16 @@ namespace Arctium.Tests.Standards.Connection.TLS
             ServerConfigHandshakeClientAuthentication hsClientAuth = null,
             ExtensionServerConfigOidFilters oidFilters = null,
             ServerConfigPostHandshakeClientAuthentication phca = null,
-            ExtensionServerConfigCertificateAuthorities certAuthorities = null)
+            ExtensionServerConfigCertificateAuthorities certAuthorities = null,
+            ExtensionServerConfigGREASE grease = null,
+            bool disableGrease = false)
         {
             certWithKey = certWithKey ?? new[] { Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1 };
 
             var serverctx = Tls13ServerContext.Default(certWithKey);
             var config = serverctx.Config;
 
+            if (grease != null) config.ConfigureGREASE(grease);
             if (certAuthorities != null) config.ConfigureExtensionCertificateAuthorities(certAuthorities);
             if (phca != null) config.ConfigurePostHandshakeClientAuthentication(phca);
             if (oidFilters != null) config.ConfigureExtensionOidFilters(oidFilters);
@@ -294,6 +347,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             if (supportedGroups != null) serverctx.Config.ConfigueExtensionSupportedGroups(supportedGroups);
             if (recordSizeLimit.HasValue) config.ConfigureExtensionRecordSizeLimit(recordSizeLimit);
             if (hsClientAuth != null) config.ConfigureHandshakeClientAuthentication(hsClientAuth);
+            if (disableGrease) config.ConfigureGREASE(null);
 
             var server = new Tls13Server(serverctx);
 
@@ -312,11 +366,15 @@ namespace Arctium.Tests.Standards.Connection.TLS
             ExtensionClientConfigSignatureAlgorithmsCert sacConfig = null,
             ClientConfigHandshakeClientAuthentication hsClientAuth = null,
             ClientConfigPostHandshakeClientAuthentication phca = null,
-            ExtensionClientConfigCertificateAuthorities certAuthorities = null)
+            ExtensionClientConfigCertificateAuthorities certAuthorities = null,
+            ExtensionClientConfigKeyShare keyShare = null,
+            ExtensionClientConfigGREASE grease = null,
+            bool disableGrease = false)
         {
-            var context = Tls13ClientContext.DefaultUnsave();
+            var context = Tls13ClientContext.DefaultUnsafe();
             var config = context.Config;
 
+            if (grease != null) config.ConfigureGREASE(grease);
             if (certAuthorities != null) config.ConfigureExtensionCertificateAuthorities(certAuthorities);
             if (phca != null) config.ConfigurePostHandshakeClientAuthentication(phca);
             if (sni != null) config.ConfigureExtensionServerName(sni);
@@ -330,7 +388,11 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 config.ConfigueExtensionSupportedGroups(supportedGroups);
             }
 
+            if (keyShare != null) config.ConfigueExtensionKeyShare(keyShare);
+
             if (recordSizeLimit != null) config.ConfigueExtensionRecordSizeLimit(recordSizeLimit);
+
+            if (disableGrease) config.ConfigureGREASE(null);
 
             Tls13Client client = new Tls13Client(context);
 

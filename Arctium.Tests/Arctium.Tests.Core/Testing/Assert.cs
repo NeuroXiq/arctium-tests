@@ -51,22 +51,30 @@ namespace Arctium.Tests.Core.Testing
             throw new AssertException(msg);
         }
 
-        public static void Throws(Action p)
+        public static void Throws(Action p, Func<Exception, bool> validateIfExceptionCorrect = null)
         {
             bool catched = false;
-            
+            bool checkException = true;
+
             try
             {
                 p();
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 catched = true;
+
+                if (validateIfExceptionCorrect != null) checkException = validateIfExceptionCorrect(e);
             }
 
             if (!catched)
             {
                 throw new AssertException("Expected to throw exception but nothing throw");
+            }
+
+            if (!checkException)
+            {
+                throw new AssertException("Exception was throws but custom assertion on exception indicates that this exception is invalid. ");
             }
         }
 

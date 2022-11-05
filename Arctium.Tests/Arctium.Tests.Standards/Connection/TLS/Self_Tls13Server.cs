@@ -21,6 +21,15 @@ namespace Arctium.Tests.Standards.Connection.TLS
     class Self_Tls13Server
     {
         [TestMethod]
+        public void SupportedGroups_ClientWillSentMultipleKeySharesServerSelectOne()
+        {
+            var server = DefaultServer(supportedGroups: new ExtensionServerConfigSupportedGroups(new [] { NamedGroup.Ffdhe6144 }));
+            var client = DefaultClient(keyShare: new ExtensionClientConfigKeyShare(new[] { NamedGroup.Ffdhe2048, NamedGroup.Ffdhe3072, NamedGroup.Ffdhe6144, NamedGroup.X25519 }));
+
+            Assert_Connect_SendReceive(server, client);
+        }
+
+        [TestMethod]
         public void Message_GenerateTest_ServerClientExchange1MBData()
         {
             var server = DefaultServer();
@@ -90,7 +99,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 cstream.Write(writedata);
             };
 
-            Assert_Connect_DoAction(server, client, saction, caction, out _, out _);
+            Assert_Connect_DoAction_Success(server, client, saction, caction, out _, out _);
         }
 
         #endregion
@@ -172,7 +181,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 for (int i = 0; i < 7; i++) stream.Read(buf);
             };
 
-            Assert_Connect_DoAction(server, client, sAction, cAction, out _, out _);
+            Assert_Connect_DoAction_Success(server, client, sAction, cAction, out _, out _);
 
         }
 
@@ -186,7 +195,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             Action<Tls13ServerStream> serverAction = (s) =>
             {
                 s.PostHandshakeClientAuthentication();
-                s.TryWaitPostHandshake();
+                s.WaitForAnyProtocolData();
                 s.Write(new byte[123]);
             };
 
@@ -195,7 +204,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 c.Read(new byte[123]);
             };
 
-            Assert_Connect_DoAction(server, client, serverAction, clientAction, out _, out _);
+            Assert_Connect_DoAction_Success(server, client, serverAction, clientAction, out _, out _);
             Assert.IsTrue(sauth.AuthSuccess);
         }
 
@@ -209,7 +218,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             Action<Tls13ServerStream> serverAction = (tlstream) =>
             {
                 tlstream.PostHandshakeClientAuthentication();
-                tlstream.TryWaitPostHandshake();
+                tlstream.WaitForAnyProtocolData();
                 tlstream.Write(new byte[1]);
             };
 
@@ -218,7 +227,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 Tls13Stream.Read(new byte[1], 0, 1);
             };
 
-            Assert_Connect_DoAction(server, client, serverAction, clientAction, out var cinfo, out var sinfo);
+            Assert_Connect_DoAction_Success(server, client, serverAction, clientAction, out var cinfo, out var sinfo);
             Assert.IsTrue(serverAuth.AuthSuccess);
         }
 
@@ -242,7 +251,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var server = DefaultServer(hsClientAuth: new TestHandshakeClientAuthServerConfig(false, ServerConfigHandshakeClientAuthentication.Action.Success));
             var client = DefaultClient(hsClientAuth: new TestHandshakeClientAuthClientConfig(null));
 
-            Assert_Connect_SendReceive(server, client, out var cinfo, out var sinfo);
+            Assert_Connect_SendReceive_Success(server, client, out var cinfo, out var sinfo);
 
             Assert.NotNull(cinfo.ResultHandshakeClientAuthentication);
             Assert.NotNull(sinfo.ResultHandshakeClientAuthentication);
@@ -254,7 +263,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var server = DefaultServer(hsClientAuth: new TestHandshakeClientAuthServerConfig(true, ServerConfigHandshakeClientAuthentication.Action.Success));
             var client = DefaultClient(hsClientAuth: new TestHandshakeClientAuthClientConfig(Tls13TestResources.CERT_WITH_KEY_cert_rsaencrypt_2048_sha256_1));
 
-            Assert_Connect_SendReceive(server, client, out var cinfo, out var sinfo);
+            Assert_Connect_SendReceive_Success(server, client, out var cinfo, out var sinfo);
 
             Assert.NotNull(cinfo.ResultHandshakeClientAuthentication);
             Assert.NotNull(sinfo.ResultHandshakeClientAuthentication);
@@ -295,7 +304,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
             foreach (var suite in allsuites)
             {
-                var clientctx = Tls13ClientContext.DefaultUnsave();
+                var clientctx = Tls13ClientContext.DefaultUnsafe();
                 clientctx.Config.ConfigueCipherSuites(new[] { suite });
                 var client = new Tls13Client(clientctx);
 
@@ -330,7 +339,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             {
                 var serverctx = Tls13ServerContext.Default(certs);
                 var server = new Tls13Server(serverctx);
-                var clientctx = Tls13ClientContext.DefaultUnsave();
+                var clientctx = Tls13ClientContext.DefaultUnsafe();
 
                 clientctx.Config.ConfigueSupportedSignatureSchemes(new[] { s });
                 var client = new Tls13Client(clientctx);
@@ -350,7 +359,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             {
                 var serverctx = Tls13ServerContext.Default(cert);
                 var server = new Tls13Server(serverctx);
-                var clientctx = Tls13ClientContext.DefaultUnsave();
+                var clientctx = Tls13ClientContext.DefaultUnsafe();
                 var client = new Tls13Client(clientctx);
 
                 clientctx.Config.ConfigueExtensionSupportedGroups(new ExtensionClientConfigSupportedGroups( new[] { group }));
@@ -378,7 +387,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
 
             Assert_Connect_SendReceive(server, client);
 
-            Assert_Connect_SendReceive(server, client, out var clientinfo, out var serverinfo);
+            Assert_Connect_SendReceive_Success(server, client, out var clientinfo, out var serverinfo);
 
             Assert.IsTrue(clientinfo.IsPskSessionResumption);
         }

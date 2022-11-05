@@ -16,6 +16,27 @@ namespace Arctium.Tests.Standards.Connection.TLS
     [TestsClass]
     internal class Tls13_Self_Extension_Server
     {
+        #region grease
+
+        [TestMethod]
+        public void Extensions_GREASE_OnOff()
+        {
+            bool[,] greaseOnOff = new bool[,] { { true, true }, { true, false }, { false, true }, { false, false } };
+
+            for (int i = 0; i < 2; i++)
+            {
+                var sg = greaseOnOff[i, 0];
+                var cg = greaseOnOff[i, 1];
+
+                var server = DefaultServer(disableGrease: sg);
+                var client = DefaultClient(disableGrease: cg);
+
+                Assert_Connect_SendReceive(server, client);
+            }
+        }
+
+        #endregion
+
         #region Extension Certificate authorities
 
         class TestCASConfig : ExtensionServerConfigCertificateAuthorities
@@ -78,10 +99,10 @@ namespace Arctium.Tests.Standards.Connection.TLS
                 tlss.Write(new byte[] { 1 });
                 tlss.PostHandshakeClientAuthentication();
                 tlss.Write(new byte[] { 1 });
-                tlss.TryWaitPostHandshake();
+                tlss.WaitForAnyProtocolData();
             };
 
-            Assert_Connect_DoAction(server, client, saction, caction, out _, out _);
+            Assert_Connect_DoAction_Success(server, client, saction, caction, out _, out _);
         }
 
         #endregion
@@ -135,7 +156,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var client = DefaultClient(sni: sniClient);
             var server = DefaultServer(sni: sniServer);
 
-            Assert_Connect_SendReceive(server, client, out var clientinfo, out var serverinfo);
+            Assert_Connect_SendReceive_Success(server, client, out var clientinfo, out var serverinfo);
 
             Assert.IsTrue(clientinfo.ExtensionResultServerName);
             Assert.IsTrue(serverinfo.ExtensionResultServerName == ExtensionServerConfigServerName.ResultAction.Success);
@@ -150,7 +171,18 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var client = DefaultClient(sni: sniClient);
             var server = DefaultServer(sni: sniServer);
 
-            Assert.Throws(() => Assert_Connect_SendReceive(server, client, out var clientinfo, out var serverinfo));
+            Func<Exception, bool> check = (e) =>
+            {
+
+                return true;
+            };
+
+            Assert_Connect_SendReceive(server, client, out var clientinfo, out var serverinfo, out var clientException, out var serverException);
+
+            if (serverException == null)
+            {
+                Assert.Fail();
+            }
         }
 
         [TestMethod]
@@ -162,7 +194,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var client = DefaultClient(sni: sniClient);
             var server = DefaultServer(sni: sniServer);
 
-            Assert_Connect_SendReceive(server, client, out var clientinfo, out var serverinfo);
+            Assert_Connect_SendReceive_Success(server, client, out var clientinfo, out var serverinfo);
 
             Assert.IsFalse(clientinfo.ExtensionResultServerName);
             Assert.IsTrue(serverinfo.ExtensionResultServerName == ExtensionServerConfigServerName.ResultAction.Ignore);
@@ -206,7 +238,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var server = DefaultServer(alpnSelector: alpnServer);
 
 
-            Assert_Connect_SendReceive(server, client, out var clientInfo, out var _);
+            Assert_Connect_SendReceive_Success(server, client, out var clientInfo, out var _);
 
             Assert.NotNull(clientInfo.ExtensionResultALPN);
 
@@ -248,7 +280,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var server = DefaultServer(alpnSelector: alpnServer);
             var client = DefaultClient(alpnConfig: alpnClient);
 
-            Assert_Connect_SendReceive(server, client, out var clientinfo, out var serverinfo);
+            Assert_Connect_SendReceive_Success(server, client, out var clientinfo, out var serverinfo);
 
             ExtensionResultALPN.TryGetAsStandarizedALPNProtocol(clientinfo.ExtensionResultALPN.Protocol, out var onClient);
             ExtensionResultALPN.TryGetAsStandarizedALPNProtocol(serverinfo.ExtensionResultALPN.Protocol, out var onServer);
@@ -305,7 +337,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var server = DefaultServer();
             var client = DefaultClient(recordSizeLimit: recordSizeLimit);
 
-            Assert_Connect_SendReceive(server, client, out var clientConInfo, out var _);
+            Assert_Connect_SendReceive_Success(server, client, out var clientConInfo, out var _);
 
             Assert.ValuesEqual(clientConInfo.ExtensionRecordSizeLimit, recordSizeLimit);
         }
@@ -319,7 +351,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var server = DefaultServer(recordSizeLimit: serverRecordSizeLimit);
             var client = DefaultClient(recordSizeLimit: clientRecordSizeLimit);
 
-            Assert_Connect_SendReceive(server, client, out var clientConInfo, out var _);
+            Assert_Connect_SendReceive_Success(server, client, out var clientConInfo, out var _);
 
             Assert.ValuesEqual(clientConInfo.ExtensionRecordSizeLimit, serverRecordSizeLimit);
         }
@@ -332,7 +364,7 @@ namespace Arctium.Tests.Standards.Connection.TLS
             var server = DefaultServer(recordSizeLimit: serverRecordSizeLimit);
             var client = DefaultClient(recordSizeLimit: clientRecordSizeLimit);
 
-            Assert_Connect_SendReceive(server, client, out var clientConInfo, out var _);
+            Assert_Connect_SendReceive_Success(server, client, out var clientConInfo, out var _);
 
             Assert.ValuesEqual(clientConInfo.ExtensionRecordSizeLimit, clientRecordSizeLimit);
         }
