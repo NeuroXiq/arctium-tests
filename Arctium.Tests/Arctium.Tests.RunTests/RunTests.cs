@@ -154,13 +154,14 @@ namespace Arctium.Tests.RunTests
 
 
 
-            var tests = FindTestClasses();
-            var filteredTests = FilterTests(tests);
+            var testClasses = FindTestClasses();
+            testClasses = FilterTests(testClasses);
+            var allTestMethods = testClasses.SelectMany(c => c.GetMethods().Where(method => method.GetCustomAttributes(typeof(TestMethodAttribute)).Any()).ToList()).ToList();
 
-            foreach (var testClass in filteredTests)
-            {
-                RunTestsFromClass(testClass);
-            }
+            var methodsToRun = FilterByMethodName(allTestMethods);
+            methodsToRun = methodsToRun.OrderBy(method => method.GetCustomAttribute<TestMethodAttribute>().ExpectedDurationInSeconds).ToList();
+
+            RunTestMethods(methodsToRun);
 
             Task.WaitAll(tasks.ToArray());
             Console.WriteLine("- END -");
@@ -196,19 +197,15 @@ namespace Arctium.Tests.RunTests
             return testClasses;
         }
 
-        private static void RunTestsFromClass(Type testClass)
+        private static void RunTestMethods(List<MethodInfo> methodsToRun)
         {
-            var members = testClass.GetMethods().Where(method => method.GetCustomAttributes(typeof(TestMethodAttribute)).Any()).ToList();
-            members = FilterByMethodName(members);
-            members = members.OrderBy(method => method.GetCustomAttribute<TestMethodAttribute>().ExpectedDurationInSeconds).ToList();
+            // need to investigate (nice to have if makes sens):
+            // instead of creating 'var instance = activator.createinstance'
+            // for each method separtely, better to create instance onec? (group method by parent class?)
+            // ----
 
-            // todo tests : implement thread per class not multiple thread execute one class 
-            // like is right not ('instance' field below shared among all)
-
-            var instance = Activator.CreateInstance(testClass);
-            // List<TestResult> testResults = new List<TestResult>();
-            List<List<MethodInfo>> groups = SplitToEqualSizeGroups(members, 4);
-            consoleOutput.TotalTests += members.Count;
+            List<List<MethodInfo>> groups = SplitToEqualSizeGroups(methodsToRun, 25);
+            consoleOutput.TotalTests += methodsToRun.Count;
 
             foreach (var g in groups)
             {
@@ -220,6 +217,7 @@ namespace Arctium.Tests.RunTests
                         var returnType = meth.ReturnType;
                         var methodName = meth.Name;
                         List<TestResult> res = new List<TestResult>();
+                        var instance = Activator.CreateInstance(meth.DeclaringType);
 
                         if (returnType == typeof(void))
                         {
